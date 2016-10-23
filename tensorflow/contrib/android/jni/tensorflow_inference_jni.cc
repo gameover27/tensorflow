@@ -33,6 +33,7 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow/core/lib/strings/stringprintf.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/mutex.h"
@@ -221,11 +222,30 @@ JNIEXPORT jint JNICALL TENSORFLOW_METHOD(close)(JNIEnv* env, jobject thiz) {
 }
 
 // TODO(andrewharp): Use memcpy to fill/read nodes.
+#define FILL_NODE_METHOD_DEPRECATED(DTYPE, JAVA_DTYPE, TENSOR_DTYPE)        \
+  FILL_NODE_SIGNATURE_DEPRECATED(DTYPE, JAVA_DTYPE) {                       \
+    jintArray dimArray = env->NewIntArray(4);                               \
+    jint *dimArray_ptr = env->GetIntArrayElements(dimArray, NULL);          \
+    dimArray_ptr[0] = x; dimArray_ptr[1] = y;                               \
+    dimArray_ptr[2] = z; dimArray_ptr[3] = d;                               \
+    TENSORFLOW_METHOD(fillNode##DTYPE##WithDimensions)(                     \
+          env, thiz, node_name, dimArray, arr);                             \
+  }
+
 #define FILL_NODE_METHOD(DTYPE, JAVA_DTYPE, TENSOR_DTYPE)                   \
   FILL_NODE_SIGNATURE(DTYPE, JAVA_DTYPE) {                                  \
+    jint *nativeDims = env->GetIntArrayElements(dims, 0);                   \
+    jsize size = env->GetArrayLength(dims);                                 \
+    int64 castDims[size];                                                   \
+    for (int i = 0; i < size; ++i) {                                        \
+           castDims[i] = static_cast<int64>(nativeDims[i]);                 \
+    }                                                                       \
     SessionVariables* vars = GetSessionVars(env, thiz);                     \
-    tensorflow::Tensor input_tensor(TENSOR_DTYPE,                           \
-                                    tensorflow::TensorShape({x, y, z, d})); \
+    tensorflow::Tensor input_tensor(                                        \
+                            TENSOR_DTYPE,                                   \
+                            tensorflow::TensorShape(                        \
+                                gtl::ArraySlice<int64>(castDims,            \
+                                size)));                                    \
     auto tensor_mapped = input_tensor.flat<JAVA_DTYPE>();                   \
     jboolean iCopied = JNI_FALSE;                                           \
     j##JAVA_DTYPE* values = env->Get##DTYPE##ArrayElements(arr, &iCopied);  \

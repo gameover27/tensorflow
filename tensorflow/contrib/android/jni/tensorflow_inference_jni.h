@@ -30,10 +30,15 @@ extern "C" {
 #define TENSORFLOW_METHOD(METHOD_NAME) \
   Java_org_tensorflow_contrib_android_TensorFlowInferenceInterface_##METHOD_NAME  // NOLINT
 
-#define FILL_NODE_SIGNATURE(DTYPE, JAVA_DTYPE)                               \
+#define FILL_NODE_SIGNATURE_DEPRECATED(DTYPE, JAVA_DTYPE)                    \
   JNIEXPORT void TENSORFLOW_METHOD(fillNode##DTYPE)(                         \
       JNIEnv * env, jobject thiz, jstring node_name, jint x, jint y, jint z, \
-      jint d, j##JAVA_DTYPE##Array arr)
+      jint d, j##JAVA_DTYPE##Array arr)                                      \
+
+#define FILL_NODE_SIGNATURE(DTYPE, JAVA_DTYPE)                               \
+  JNIEXPORT void TENSORFLOW_METHOD(fillNode##DTYPE##WithDimensions)(         \
+      JNIEnv * env, jobject thiz, jstring node_name, jintArray dims,         \
+      j##JAVA_DTYPE##Array arr)
 
 #define READ_NODE_SIGNATURE(DTYPE, JAVA_DTYPE)               \
   JNIEXPORT jint TENSORFLOW_METHOD(readNode##DTYPE)(         \
@@ -48,6 +53,9 @@ JNIEXPORT jint JNICALL TENSORFLOW_METHOD(runInference)(
 
 JNIEXPORT jint JNICALL TENSORFLOW_METHOD(close)(JNIEnv* env, jobject thiz);
 
+FILL_NODE_SIGNATURE_DEPRECATED(Float, float);
+FILL_NODE_SIGNATURE_DEPRECATED(Int, int);
+FILL_NODE_SIGNATURE_DEPRECATED(Double, double);
 FILL_NODE_SIGNATURE(Float, float);
 FILL_NODE_SIGNATURE(Int, int);
 FILL_NODE_SIGNATURE(Double, double);
